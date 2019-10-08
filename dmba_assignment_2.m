@@ -1,44 +1,60 @@
 %% Homework 2 DMBA
-%% Exercise 1
-
+% We specify an example for the ReDog problem
 f = [2 1];
 A = [3 2; 3 1; 1 2];
 b = [80 50 60];
 
-f = cat(2, f, zeros(1, size(A,1)))
-Aeq = cat(2, A, eye(size(A,1)))
+%% Exercise 1
+% We first add slack variables. We need to add zeroes to the cost vector
+% and the identity matrix on the right side of our A matrix. Moreover, we
+% need to specify bounds on these slack variables. By definition, slack
+% variables are bounded from below by 0 and have no upper bound.
+f = cat(2, f, zeros(1, size(A,1)));
+Aeq = cat(2, A, eye(size(A,1)));
 beq = b;
 lb = zeros(1, size(Aeq, 2));
 ub = [];
 
-[x,z] = linprog(-f,[],[],Aeq,beq,lb,ub)
+% Solve this problem for an optimal basis
+[x,z] = linprog(-f, [], [], Aeq, beq, lb, ub);
 
-bv = find(x);
-nbv = find(~x);
+bv = find(x); % Nonzero entries of x
+nbv = find(~x); % Zero entries of x
 
-B = Aeq(:, bv)
-N = Aeq(:, nbv)
+B = Aeq(:, bv);
+N = Aeq(:, nbv);
+
+disp('Optimal basis matrix:')
+disp(B)
 
 %% Exercise 2
 B_inv = inv(B);
-I = eye(size(A,1));
+B_inv2 = inv(B);
 
+% Get rid of floating point errors around 0
+B_inv(ismembertol(B_inv, 0, 10e-5)) = ...
+        round(B_inv(ismembertol(B_inv, 0, 10e-5)));
+
+I = eye(size(A,1));
+x_bv = x(bv);
+
+% Initialise arrays to store bounds
 lb_b = [];
 ub_b = [];
-for i = 1:size(A,1)     %%VRAAG::: vanaf i=2 loopt hij goed, maar voor i=1 
-                        % twijfel ik, wat denk jij?
 
-    B_inv_col = B_inv * I(:,i); %select the column for that epsilon
-    x_bv = x(bv);
-    eps = -x_bv./B_inv_col      %%VERVOLG OP VRAAG::: Want voor i=1 zegt hij 
-                                % hier namelijk [-inf, 9.3675, -0.000], terwijl 
-                                % het [inf, inf, 4] zou moeten zijn toch? Of zit 
-                                % ik nou helemaal verkeerd?
+for i = 1:size(A,1)
+
+    % Select the column for that epsilon
+    B_inv_col = B_inv * I(:,i);
+    
+    %TODO: We now round this to take care of zeroes being stored as
+    %0.0000000001 etcetera. How can we fix this?
+    eps = -x_bv ./ B_inv_col;
 
     lower =[];
     upper = [];
-    for j = 1:size(x_bv,1)  %whether it is upper or lower only depends on 
-                            %B_inv_col and not on x_bv
+    for j = 1:size(x_bv, 1)  %whether it is upper or lower only depends on 
+                                %B_inv_col and not on x_bv
         if B_inv_col(j) >= 0
             lower(:,j) = eps(j,:);
         else
@@ -46,12 +62,21 @@ for i = 1:size(A,1)     %%VRAAG::: vanaf i=2 loopt hij goed, maar voor i=1
         end
     end
 
-    lower1 = find(lower); % To remove the zeros 
-    upper1 = find(upper);
-    lower_bound = lower(:, lower1);
-    upper_bound = upper(:, upper1);
-  
-    lb_b(i,:) = b(:,i) + max(lower_bound); %calculate lower and upper bounds of b
+    % To remove the zeroes, we use find() 
+    lower_bound = lower(:, find(lower));
+    upper_bound = upper(:, find(upper));
+    
+    % If there is no upper bound, set it to Inf. Idem for lower bound and
+    % -Inf
+    if isempty(upper_bound)
+        upper_bound = Inf;
+    end
+    if isempty(lower_bound)
+        lower_bound = -Inf;
+    end
+    
+    % Calculate lower and upper bounds of b and store these
+    lb_b(i,:) = b(:,i) + max(lower_bound);
     ub_b(i,:) = b(:,i) + min(upper_bound);
 
 end
