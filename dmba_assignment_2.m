@@ -8,6 +8,7 @@ A = [3 2; 3 1; 1 2];
 b = [80 50 60];
 lb = zeros(1, size(A,2));
 ub = [];
+size_cvector = [1:size(f,2)];
 
 %% Exercise 1A
 % We first add slack variables. We need to add zeroes to the cost vector
@@ -151,7 +152,7 @@ for i = 1:size(f(bv), 2)
 
 end
     
-bounds_c = [lb_c f(bv)' ub_c];
+bounds_c = [lb_c(size_cvector) f(size_cvector)' ub_c(size_cvector)]
 col_names = {'lower_bound', 'current_value', 'upper_bound'};
 bounds_of_c = array2table(bounds_c, 'VariableNames', col_names);
 
