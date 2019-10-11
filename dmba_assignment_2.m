@@ -33,9 +33,12 @@ nbv = find(~x); % Zero entries of x
 B = Aeq(:, bv);
 N = Aeq(:, nbv);
 
-disp("============== Exercise 1A) ==============")
+disp("============== Exercise 1A) ===============")
 disp("------ Identifying the optimal basis ------")
 fprintf(2,'\n')
+
+disp('Basic variables in optimal basis:')
+disp(bv')
 
 disp('Optimal basis matrix:')
 disp(B)
@@ -97,7 +100,7 @@ bounds_b = [lb_b b' ub_b];
 col_names = {'lower_bound', 'current_value', 'upper_bound'};
 bounds_of_b = array2table(bounds_b, 'VariableNames', col_names);
 
-disp("=============== Exercise 1B) ================")
+disp("=============== Exercise 1B) =================")
 disp("---- Computing the lower and upper bounds ----")
 disp("---- for the entries of the b vector such ----")
 disp("--- that the optimal basis is not changed. ---")
@@ -152,14 +155,14 @@ for i = 1:size(f(bv), 2)
 
 end
     
-bounds_c = [lb_c(size_cvector) f(size_cvector)' ub_c(size_cvector)]
+bounds_c = [lb_c(size_cvector) f(size_cvector)' ub_c(size_cvector)];
 col_names = {'lower_bound', 'current_value', 'upper_bound'};
 bounds_of_c = array2table(bounds_c, 'VariableNames', col_names);
 
-disp("=============== Exercise 1C) ================")
-disp("---- Computing the lower and upper bounds ----")
+disp("================ Exercise 1C) =================")
+disp("---- Computing the lower and upper bounds -----")
 disp("--- for the entries of the cost vector such ---")
-disp("--- that the optimal basis is not changed. ---")
+disp("--- that the optimal basis is not changed. ----")
 fprintf(2, '\n')
 
 disp(bounds_of_c)
