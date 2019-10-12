@@ -1,6 +1,7 @@
 %% Homework 2 DMBA
-% Note: this script runs clear at the top of the file
+% Note: this script runs clear and clc at the top of the file
 clear
+clc
  
 % We specify an example for the problem from page 255 from the book
 % (Winston, W. L. (2004). Operations research applications and algorithms.
@@ -13,7 +14,7 @@ bgeq = [];
 Aeq = [];
 beq = [];
  
-lb = zeros(1, size(Aleq, 2));
+lb = zeros(1, size(f, 2));
 ub = [];
  
 original_number_of_variables = size(f, 2);
@@ -52,6 +53,9 @@ fprintf(2,'\n')
  
 disp('Basic variables in optimal basis:')
 disp(bv')
+
+disp('Nonbasic variables in optimal basis:')
+disp(nbv')
  
 disp('Optimal basis matrix:')
 disp(B)
@@ -107,7 +111,7 @@ for i = 1:size(Aeq, 1)
 end
  
 bounds_b = [lb_b beq' ub_b];
-col_names = {'lower_bound', 'current_value', 'upper_bound'};
+col_names = {'LowerBound', 'CurrentValue', 'UpperBound'};
 bounds_of_b = array2table(bounds_b, 'VariableNames', col_names);
  
 disp("=============== Exercise 1B) =================")
@@ -118,10 +122,7 @@ fprintf(2, '\n')
  
 disp(bounds_of_b)
  
-%% Exercise 1C
-B_inv_aj = B_inv * N;
-coef_nbv = f_bv*B_inv_aj - f_nbv;
- 
+%% Exercise 1C 
 % Number of (non)basic variables
 num_bv = size(bv, 1);
 num_nbv = size(nbv, 1);
@@ -133,6 +134,9 @@ ub_c_bv = zeros(num_bv, 1);
 % The lower bounds for nonbasic variables are always -Inf
 lb_c_nbv = -Inf * ones(num_nbv, 1);
 ub_c_nbv = zeros(num_nbv, 1);
+ 
+B_inv_aj = B_inv * N;
+coef_nbv = f_bv*B_inv_aj - f_nbv;
  
 % Find the bounds for the basic variables
 for i = 1:num_bv
@@ -185,7 +189,7 @@ bounds_c_nbv = [lb_c_nbv f_nbv' ub_c_nbv];
 % Create a table with the bounds and the variable "names" (bv/nbv)
 table = cat(2, cat(1, bv, nbv), cat(1, bounds_c_bv, bounds_c_nbv));
 table = sortrows(table);
-col_names = {'Variable', 'Lower Bound', 'Current Value', 'Upper Bound'};
+col_names = {'Variable', 'LowerBound', 'CurrentValue', 'UpperBound'};
  
 % We only show the bounds for the nonslack variables, as these have cost 0
 % by definition, so a changed cost for slack variables does not make sense

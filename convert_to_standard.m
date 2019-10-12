@@ -75,8 +75,8 @@ function [f, Aeq, beq, lb, ub] = ...
     % Create coefficients for slack variables
     leq = eye(size(Aleq, 1)); 
     geq = -eye(size(Ageq, 1));
-    eq = zeros(size(Aeq, 1));
-    slacks = blkdiag(leq, geq, eq);
+    slacks = blkdiag(leq, geq);
+    slacks = cat(1, slacks, zeros(size(Aeq, 1), size(slacks, 2)));
     
     % Append all arrays
     Aeq = cat(2, cat(1, Aleq, Ageq, Aeq), slacks);
@@ -85,5 +85,5 @@ function [f, Aeq, beq, lb, ub] = ...
     % Modify f and lb with zeros
     f = cat(2, f, zeros(1, size(slacks, 2)));
     lb = cat(2, lb, zeros(1, size(slacks, 2)));
-    
+    disp(Aeq)
 end
