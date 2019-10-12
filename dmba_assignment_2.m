@@ -4,13 +4,19 @@ clear
  
 % We specify an example for the ReDog problem (now it is the example from
 % whatsapp
+% TODO
 f = [600 1000 800 1300 -20];
-A = [2 3 2 4 -1; 1 0 1 0 0;0 1 0 1 0; 1 1 0 0 0; 0 0 1 1 0; 0 0 0 0 1];
-b = [0 800 1000 900 900 4000];
-
-lb = zeros(1, size(A,2));
+Aleq = [2 3 2 4 -1; 1 0 1 0 0; 0 1 0 1 0; 1 1 0 0 0; 0 0 1 1 0; 0 0 0 0 1];
+bleq = [0 800 1000 900 900 4000];
+Ageq = [];
+bgeq = [];
+Aeq = [];
+beq = [];
+ 
+lb = zeros(1, size(Aleq, 2));
 ub = [];
-size_cvector = [1:size(f,2)];
+ 
+original_number_of_variables = size(f, 2);
  
 %% Exercise 1A
 % We first add slack variables. We need to add zeroes to the cost vector
@@ -20,32 +26,23 @@ size_cvector = [1:size(f,2)];
 % For this, we use the function constructed to convert any problem into
 % standard form for exercise 2A: convert_to_standard. Since our current
 % problem only has 'less than or equal to' constraints, we call the
-% function as specified below.
+% function with empty arrays for Aqeg, bgeq, Aeq, and beq.
  
 [f, Aeq, beq, lb, ub] = ...
-    convert_to_standard(f, A, b, [], [], [], [], lb, ub);
+    convert_to_standard(f, Aleq, bleq, Ageq, bgeq, Aeq, beq, lb, ub);
  
 % Solve this problem for an optimal basis
 [x,z] = linprog(-f, [], [], Aeq, beq, lb, ub,...
-    optimoptions('linprog','Display','none')); % Don't print "Optimal solution found."
+    optimoptions('linprog','Display','none'));
  
-bv = find(x); % Nonzero entries of x
-nbv = find(~x); % Zero entries of x
-
-vec = zeros(size(f, 2), 1)';
-vec(bv) = 1;
-f__bv = f.*vec;
-pos_bv_cvector = find(f__bv); %position van bv variables in c vector
-num_bv_cvector = size(pos_bv_cvector, 2); %number of bv in c vector
-f_bv_cvector = f(pos_bv_cvector); %c values of bv
-
-vec = zeros(size(f, 2), 1)';
-vec(nbv) = 1;
-f__nbv = f.*vec;
-pos_nbv_cvector = find(f__nbv); %position van nbv variables in c vector
-num_nbv_cvector = size(pos_nbv_cvector, 2); %number of nbv in c vector
-f_nbv_cvector = f(pos_nbv_cvector); %c values of nbv
-
+% Find the basic (nonzero in x) and nonbasic variables, along with their
+% current values and costs.
+bv = find(x);
+nbv = find(~x);
+x_bv = x(bv); % x(nbv) is not needed, so we do not create it
+f_bv = f(bv);
+f_nbv = f(nbv);
+ 
 B = Aeq(:, bv);
 N = Aeq(:, nbv);
  
@@ -61,43 +58,40 @@ disp(B)
  
 %% Exercise 1B
 B_inv = inv(B);
-x_bv = x(bv);
  
 % Get rid of floating point errors around 0
 close_to_zero = ismembertol(B_inv, 0, 10e-5);
 B_inv(close_to_zero) = round(B_inv(close_to_zero));
  
 % Construct identity matrix to later retrieve unit vectors from
-I = eye(size(A, 1));
+I = eye(size(Aeq, 1));
  
 % Initialise arrays to store bounds
-lb_b = zeros(size(A, 1), 1);
-ub_b = zeros(size(A, 1), 1);
+lb_b = zeros(size(Aeq, 1), 1);
+ub_b = zeros(size(Aeq, 1), 1);
  
-for i = 1:size(A, 1)
+for i = 1:size(Aeq, 1)
  
     % Select the column for that epsilon
     B_inv_col = B_inv * I(:, i);
-    
     eps = -x_bv ./ B_inv_col;
  
     % Preallocate vectors for upper and lower bounds
     lower_bound = [];
     upper_bound = [];
     
-    for j = 1:size(x_bv, 1)  %whether it is upper or lower only depends on 
-                                %B_inv_col and not on x_bv
+    for j = 1:size(x_bv, 1)
         if B_inv_col(j) >= 0
             % If the scalar is nonnegative, then it provides a lower bound
             lower_bound = cat(2, lower_bound, eps(j, :));
         else
-            % If negative, it gives us an upper bound.
+            % If negative, it gives us an upper bound
             upper_bound = cat(2, upper_bound, eps(j, :));
         end
     end
     
     % If there is no lower bound, set it to -Inf. Idem for upper bound and
-    % Inf.
+    % Inf
     if isempty(lower_bound)
         lower_bound = -Inf;
     end
@@ -107,12 +101,12 @@ for i = 1:size(A, 1)
     end
     
     % Calculate lower and upper bounds of b and store these
-    lb_b(i, :) = b(:, i) + max(lower_bound);
-    ub_b(i, :) = b(:, i) + min(upper_bound);
+    lb_b(i, :) = beq(:, i) + max(lower_bound);
+    ub_b(i, :) = beq(:, i) + min(upper_bound);
  
 end
  
-bounds_b = [lb_b b' ub_b];
+bounds_b = [lb_b beq' ub_b];
 col_names = {'lower_bound', 'current_value', 'upper_bound'};
 bounds_of_b = array2table(bounds_b, 'VariableNames', col_names);
  
@@ -125,19 +119,26 @@ fprintf(2, '\n')
 disp(bounds_of_b)
  
 %% Exercise 1C
-% For the BASIC variables:
 B_inv_aj = B_inv * N;
-coef_nbv = f(bv)*B_inv_aj - f(nbv);
-
+coef_nbv = f_bv*B_inv_aj - f_nbv;
+ 
+% Number of (non)basic variables
+num_bv = size(bv, 1);
+num_nbv = size(nbv, 1);
+ 
 % Initialise arrays to store bounds
-lb_c_bv = zeros(num_bv_cvector , 1);
-ub_c_bv = zeros(num_bv_cvector, 1);
-
-for i = 1:num_bv_cvector
+lb_c_bv = zeros(num_bv, 1);
+ub_c_bv = zeros(num_bv, 1);
+ 
+% The lower bounds for nonbasic variables are always -Inf
+lb_c_nbv = -Inf * ones(num_nbv, 1);
+ub_c_nbv = zeros(num_nbv, 1);
+ 
+% Find the bounds for the basic variables
+for i = 1:num_bv
     
     % Select the column for that epsilon
     B_inv_aj_row = B_inv_aj(i,:);
-    
     eps = -coef_nbv ./ B_inv_aj_row;
 
     % Preallocate vectors for upper and lower bounds
@@ -154,50 +155,42 @@ for i = 1:num_bv_cvector
         end
     end
  
-    % If there is no upper bound, set it to Inf. Idem for lower bound and
-    % -Inf.
+    % If there is no lower bound, set it to -Inf. Idem for upper bound and
+    % Inf.
+    if isempty(lower_bound)
+        lower_bound = -Inf;
+    end
+    
     if isempty(upper_bound)
         upper_bound = Inf;
     end
  
-    if isempty(lower_bound)
-        lower_bound = -Inf;
-    end
- 
     % Calculate lower and upper bounds of b and store these.
-    lb_c_bv(i, :) = f_bv_cvector(:, i) + max(lower_bound);
-    ub_c_bv(i, :) = f_bv_cvector(:, i) + min(upper_bound);
+    lb_c_bv(i, :) = f_bv(:, i) + max(lower_bound);
+    ub_c_bv(i, :) = f_bv(:, i) + min(upper_bound);
  
 end
-
-bounds_c_bv = [lb_c_bv f(pos_bv_cvector)' ub_c_bv];
-
-% For the NON BASIC variables:
-f_nbv = f(nbv);
-
-for i = 1:num_nbv_cvector
-    coef_nbv = f(bv)*B_inv_aj(:,i) - f_nbv(:,i);
-    lb_c_nbv(i, :) = -Inf;  % the lowerbounds for nonbasic variables are 
-                            % always -Inf
+ 
+bounds_c_bv = [lb_c_bv f_bv' ub_c_bv];
+ 
+% Find the (upper) bounds for the nonbasic variables (recall that lower
+% bounds for nonbasic variables are always -Inf)
+for i = 1:num_nbv
+    coef_nbv = f_bv*B_inv_aj(:,i) - f_nbv(:,i);
     ub_c_nbv(i, :) = f_nbv(:, i) + coef_nbv ;
-    
-end 
-
-bounds_c_nbv = [lb_c_nbv f(pos_nbv_cvector)' ub_c_nbv];
-
-% Combine the bounds of the basic and nonbasic variables
-% Also sort them so they are ordered correctly 
-bounds_c_unordered = [bounds_c_bv; bounds_c_nbv];
-order_bounds_c = [pos_bv_cvector pos_nbv_cvector];
-ordering_1 = reshape(1:size(order_bounds_c, 2), 1, size(order_bounds_c, 2));
-ordering_2 = [order_bounds_c; ordering_1];
-ordering_3 = sortrows(ordering_2.',1).';
-ordering_4 = ordering_3(2, :);
-bounds_c_ordered = bounds_c_unordered([ordering_4], :);
-
-%set up table
-col_names = {'lower_bound', 'current_value', 'upper_bound'};
-bounds_of_c = array2table(bounds_c_ordered, 'VariableNames', col_names);
+end
+ 
+bounds_c_nbv = [lb_c_nbv f_nbv' ub_c_nbv];
+ 
+% Create a table with the bounds and the variable "names" (bv/nbv)
+table = cat(2, cat(1, bv, nbv), cat(1, bounds_c_bv, bounds_c_nbv));
+table = sortrows(table);
+col_names = {'Variable', 'Lower Bound', 'Current Value', 'Upper Bound'};
+ 
+% We only show the bounds for the nonslack variables, as these have cost 0
+% by definition, so a changed cost for slack variables does not make sense
+bounds_of_c = array2table(table(1:original_number_of_variables, :),...
+    'VariableNames', col_names);
  
 disp("================ Exercise 1C) =================")
 disp("---- Computing the lower and upper bounds -----")
@@ -206,5 +199,4 @@ disp("--- that the optimal basis is not changed. ----")
 fprintf(2, '\n')
  
 disp(bounds_of_c)
-
-
+ 
