@@ -2,9 +2,9 @@
 % Note: this script runs clear at the top of the file
 clear
  
-% We specify an example for the ReDog problem (now it is the example from
-% whatsapp
-% TODO
+% We specify an example for the problem from page 255 from the book
+% (Winston, W. L. (2004). Operations research applications and algorithms.
+% Belmont (Calif.): Duxbury Press.), figure 17 (LINDO Output for HAL).
 f = [600 1000 800 1300 -20];
 Aleq = [2 3 2 4 -1; 1 0 1 0 0; 0 1 0 1 0; 1 1 0 0 0; 0 0 1 1 0; 0 0 0 0 1];
 bleq = [0 800 1000 900 900 4000];
